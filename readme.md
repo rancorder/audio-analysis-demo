@@ -202,7 +202,7 @@ MIT License
 
 ## 👤 作成者
 
-**[あなたの名前]**
+Ai Art Studio
 - GitHub: [@rancorder](https://github.com/rancorder)
 - Email: xzengbu@gmail.com
 - ポートフォリオ: https://github.com/rancorder/audio-analysis-portfolio
