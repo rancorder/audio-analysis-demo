@@ -203,9 +203,9 @@ MIT License
 ## 👤 作成者
 
 **[あなたの名前]**
-- GitHub: [@your-username](https://github.com/your-username)
-- Email: your.email@example.com
-- ポートフォリオ: https://github.com/your-username/audio-analysis-portfolio
+- GitHub: [@rancorder](https://github.com/rancorder)
+- Email: xzengbu@gmail.com
+- ポートフォリオ: https://github.com/rancorder/audio-analysis-portfolio
 
 ## 🙏 謝辞
 
