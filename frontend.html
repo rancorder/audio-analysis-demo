@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音声解析デモ - Whisper + OpenSMILE + BERT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tech-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .upload-zone:hover {
+            background: #e8e9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-zone.dragover {
+            background: #d8d9ff;
+            border-color: #764ba2;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .result-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .feature-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .feature-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .sentiment-score {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .sentiment-1, .sentiment-2 { background: #ff6b6b; color: white; }
+        .sentiment-3 { background: #ffd93d; color: #333; }
+        .sentiment-4, .sentiment-5 { background: #6bcf7f; color: white; }
+
+        .transcription-text {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.8;
+            font-size: 1.1em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .processing-time {
+            text-align: right;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .file-info {
+            background: #e8e9ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ 音声解析デモシステム</h1>
+            <p class="subtitle">Whisper + OpenSMILE + BERT による統合音声解析</p>
+            <div class="tech-stack">
+                <span class="tech-badge">🎯 Whisper (文字起こし)</span>
+                <span class="tech-badge">📊 OpenSMILE (音声特徴)</span>
+                <span class="tech-badge">🧠 BERT (感情分析)</span>
+                <span class="tech-badge">⚡ FastAPI</span>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">音声ファイルをアップロード</h2>
+            
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <p style="font-size: 1.2em; margin-bottom: 10px;">
+                    ファイルをドラッグ&ドロップ<br>または クリックして選択
+                </p>
+                <p style="color: #666; font-size: 0.9em;">
+                    対応形式: WAV, MP3, M4A (最大10MB)
+                </p>
+                <input type="file" id="fileInput" accept=".wav,.mp3,.m4a">
+            </div>
+
+            <div class="file-info" id="fileInfo"></div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="analyzeBtn" disabled>🚀 解析開始</button>
+                <button id="clearBtn" style="background: #6c757d;">🔄 クリア</button>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="font-size: 1.2em; color: #667eea;">音声を解析中...</p>
+            <p style="color: #666; margin-top: 10px;">処理には数秒〜数十秒かかります</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="card">
+                <h2 style="margin-bottom: 25px;">📊 解析結果</h2>
+
+                <!-- 文字起こし結果 -->
+                <div class="result-section" id="transcriptionSection">
+                    <h3>🎙️ 文字起こし結果</h3>
+                    <div class="transcription-text" id="transcriptionText"></div>
+                    <p style="margin-top: 10px; color: #666;">
+                        <span id="languageInfo"></span> | 
+                        <span id="durationInfo"></span>
+                    </p>
+                </div>
+
+                <!-- 音声特徴 -->
+                <div class="result-section" id="featuresSection">
+                    <h3>📈 音声特徴量 (OpenSMILE)</h3>
+                    <div class="feature-grid" id="featuresGrid"></div>
+                </div>
+
+                <!-- 感情分析 -->
+                <div class="result-section" id="sentimentSection">
+                    <h3>🧠 感情分析 (BERT)</h3>
+                    <div id="sentimentResult"></div>
+                </div>
+
+                <div class="processing-time" id="processingTime"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>💻 技術ポートフォリオデモ | FastAPI + Python</p>
+            <p style="margin-top: 5px; font-size: 0.9em;">
+                音声解析 × 機械学習エンジニア
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let selectedFile = null;
+
+        // アップロードゾーンのクリックイベント
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        // ファイル選択
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // ドラッグ&ドロップ
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        // ファイル処理
+        function handleFile(file) {
+            if (!file) return;
+
+            // ファイルタイプチェック
+            const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/x-m4a'];
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const allowedExts = ['wav', 'mp3', 'm4a'];
+
+            if (!allowedExts.includes(fileExt)) {
+                showError('サポートされていないファイル形式です。WAV, MP3, M4Aのみ対応しています。');
+                return;
+            }
+
+            // ファイルサイズチェック (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。');
+                return;
+            }
+
+            selectedFile = file;
+            fileInfo.innerHTML = `✅ ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            fileInfo.style.display = 'block';
+            analyzeBtn.disabled = false;
+            hideError();
+        }
+
+        // 解析実行
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // UI更新
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            analyzeBtn.disabled = true;
+            hideError();
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('解析中にエラーが発生しました: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        // 結果表示
+        function displayResults(data) {
+            // 文字起こし
+            if (data.transcription) {
+                document.getElementById('transcriptionText').textContent = 
+                    data.transcription.text || '文字起こし結果がありません';
+                document.getElementById('languageInfo').textContent = 
+                    `言語: ${data.transcription.language || '不明'}`;
+                document.getElementById('durationInfo').textContent = 
+                    `時間: ${data.transcription.duration || 0}秒`;
+            }
+
+            // 音声特徴
+            if (data.audio_features) {
+                const featuresGrid = document.getElementById('featuresGrid');
+                featuresGrid.innerHTML = '';
+
+                const features = [
+                    { label: 'ピッチ平均', value: data.audio_features.pitch_mean, unit: 'Hz' },
+                    { label: 'ピッチ標準偏差', value: data.audio_features.pitch_std, unit: '' },
+                    { label: 'シマー', value: data.audio_features.shimmer, unit: '' },
+                    { label: 'ジッター', value: data.audio_features.jitter, unit: '' },
+                    { label: '音量平均', value: data.audio_features.loudness_mean, unit: 'dB' },
+                    { label: '音量標準偏差', value: data.audio_features.loudness_std, unit: '' }
+                ];
+
+                features.forEach(feature => {
+                    if (feature.value !== null && feature.value !== undefined) {
+                        const item = document.createElement('div');
+                        item.className = 'feature-item';
+                        item.innerHTML = `
+                            <div class="feature-label">${feature.label}</div>
+                            <div class="feature-value">${feature.value.toFixed(2)} ${feature.unit}</div>
+                        `;
+                        featuresGrid.appendChild(item);
+                    }
+                });
+            }
+
+            // 感情分析
+            if (data.sentiment) {
+                const sentimentResult = document.getElementById('sentimentResult');
+                sentimentResult.innerHTML = `
+                    <span class="sentiment-score sentiment-${data.sentiment.score}">
+                        ${data.sentiment.label} (${data.sentiment.score}/5)
+                    </span>
+                    <p style="margin-top: 15px; color: #666;">
+                        信頼度: ${(data.sentiment.confidence * 100).toFixed(1)}%
+                    </p>
+                `;
+            }
+
+            // 処理時間
+            document.getElementById('processingTime').textContent = 
+                `処理時間: ${data.processing_time}秒`;
+
+            // 結果表示
+            results.style.display = 'block';
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // エラー表示
+        function showError(message) {
+            errorMessage.textContent = '❌ ' + message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // クリアボタン
+        clearBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            results.style.display = 'none';
+            analyzeBtn.disabled = true;
+            hideError();
+        });
+    </script>
+</body>
+</html>
